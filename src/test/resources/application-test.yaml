@@ -1,0 +1,21 @@
+# Perfil "test": valores ficticios para que las pruebas no dependan del archivo .env.
+# En las pruebas con Testcontainers, la URL real de PostgreSQL y Redis la inyecta @ServiceConnection.
+spring:
+  datasource:
+    username: test
+    password: test
+  cache:
+    # Fase 6: las pruebas usan una caché en memoria en vez de Redis, así la lógica del servicio se prueba sin
+    # depender de la red. La configuración real (TTL, prefijo, JSON) se prueba aparte en RedisCacheConfigTest.
+    type: simple
+
+liga:
+  jwt:
+    # Secreto FICTICIO, solo para pruebas (más de 32 bytes). No es ni se parece a un secreto real:
+    # jamás se debe usar fuera de las pruebas.
+    secret: ficticio-solo-para-pruebas-automatizadas-no-es-un-secreto-real-0123456789
+    expiration-minutes: 60
+  google:
+    # ID de cliente FICTICIO. Las pruebas nunca hablan con Google: sustituyen el verificador de tokens o
+    # firman sus propios ID tokens con una clave RSA generada en la prueba.
+    client-id: cliente-ficticio-de-pruebas.apps.googleusercontent.com

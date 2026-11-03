@@ -1,0 +1,36 @@
+### Maven ###
+target/
+!.mvn/wrapper/maven-wrapper.properties
+
+### Secretos y configuración local: NUNCA al repositorio ###
+.env
+.env.*
+!.env.example
+
+### IDEs ###
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.apt_generated_tests/
+.springBeans
+.sts4-cache/
+nbproject/
+build/
+
+### Sistema operativo y registros ###
+.DS_Store
+Thumbs.db
+*.log
+HELP.md
+
+### Material de trabajo (ya integrado en src/): no va al repositorio ###
+_borrador_*/
+_integrar_borradores.ps1
+CONTINUAR_MANUALMENTE.md

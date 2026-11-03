@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingresar con Google - Liga de Fútbol</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 3rem auto; padding: 0 1rem; color: #1f2937; }
+    h1 { font-size: 1.4rem; }
+    .caja { border: 1px solid #d1d5db; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+    textarea { width: 100%; height: 7rem; font-family: monospace; font-size: .8rem; }
+    button { padding: .5rem 1rem; cursor: pointer; }
+    .error { color: #b91c1c; }
+    .oculto { display: none; }
+    code { background: #f3f4f6; padding: .1rem .3rem; border-radius: 4px; }
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <h1>Liga de Fútbol: ingresar con Google</h1>
+  <p>Inicia sesión con tu cuenta de Google. La API verifica tu identidad y te entrega un token propio para usar en Swagger.</p>
+
+  <div id="g_id_onload" data-client_id="1096597901422-h0lg6qvv7naca7ai7n0j1nrkldu08kmr.apps.googleusercontent.com" data-callback="alRecibirCredencial" data-auto_prompt="false"></div>
+  <div class="g_id_signin" data-type="standard" data-size="large" data-text="signin_with" data-locale="es"></div>
+
+  <p id="error" class="error"></p>
+
+  <div id="resultado" class="caja oculto">
+    <p><strong id="quien"></strong></p>
+    <p>Token propio (válido por <span id="vigencia"></span> minutos):</p>
+    <textarea id="token" readonly></textarea>
+    <p><button id="copiar" type="button">Copiar token</button></p>
+    <ol>
+      <li>Abre <a href="/swagger-ui.html" target="_blank">Swagger UI</a>.</li>
+      <li>Pulsa <code>Authorize</code>, pega el token (sin escribir "Bearer") y confirma.</li>
+      <li>Ya puedes probar los endpoints con tu rol.</li>
+    </ol>
+  </div>
+
+  <script>
+    async function alRecibirCredencial(respuesta) {
+      const error = document.getElementById('error');
+      error.textContent = '';
+      try {
+        const r = await fetch('/api/v1/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: respuesta.credential })
+        });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({}));
+          error.textContent = 'No se pudo ingresar (' + r.status + '): ' + (e.mensaje || 'error desconocido');
+          return;
+        }
+        const datos = await r.json();
+        document.getElementById('quien').textContent = datos.nombre + ' (' + datos.email + ') - rol ' + datos.rol;
+        document.getElementById('vigencia').textContent = Math.round(datos.expiraEn / 60);
+        document.getElementById('token').value = datos.token;
+        document.getElementById('resultado').classList.remove('oculto');
+      } catch (e) {
+        error.textContent = 'No se pudo conectar con la API: ' + e.message;
+      }
+    }
+    document.getElementById('copiar').addEventListener('click', async () => {
+      const t = document.getElementById('token');
+      t.select();
+      try { await navigator.clipboard.writeText(t.value); } catch (e) { document.execCommand('copy'); }
+    });
+  </script>
+</body>
+</html>

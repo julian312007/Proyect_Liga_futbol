@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: liga-futbol
+
+  config:
+    # Carga el archivo ".env" de la raíz del proyecto si existe (en pruebas o CI puede no existir).
+    import: optional:file:.env[.properties]
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:liga}
+    # Sin valor por defecto a propósito: si faltan, la aplicación no arranca (falla rápido).
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    # Evita consultas lazy fuera de la capa de servicio (y el patrón de acceso a BD desde el controlador).
+    open-in-view: false
+    hibernate:
+      # El esquema lo crea Flyway; Hibernate solo comprueba que las entidades coincidan con las tablas.
+      ddl-auto: validate
+
+  flyway:
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # Redis solo es una caché: si no responde, la API debe seguir (CacheErrorHandler). Sin estos límites un Redis
+      # que no contesta haría esperar hasta 60 s a cada petición antes de caer a la base de datos.
+      timeout: 2s
+      connect-timeout: 2s
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    # Las respuestas de error nunca exponen trazas ni mensajes internos.
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+# ---------------------------------------------------------------------------
+# Seguridad (Fase 1). Todo llega por variables de entorno (o por el archivo .env): no hay secretos aquí.
+# ---------------------------------------------------------------------------
+liga:
+  jwt:
+    # Secreto de firma HS256 del JWT propio. Sin valor por defecto a propósito: si falta, la aplicación no arranca.
+    # Mínimo 32 bytes (256 bits); se usa como texto, no como Base64.
+    secret: ${JWT_SECRET}
+    # Vigencia del token en minutos (mayor que cero). Cuanto más corta, menos daño hace un token robado.
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  google:
+    # ID de cliente de OAuth 2.0 (tipo "Aplicación web") de Google Cloud Console. Es la audiencia que se exige a
+    # los ID tokens: un token emitido para otra aplicación se rechaza. No es un secreto y no hay client secret.
+    # Sin valor por defecto a propósito: si falta, la aplicación no arranca.
+    client-id: ${GOOGLE_CLIENT_ID}
+  admin:
+    # Correo de Google del administrador inicial (ver AdminInicializador). Vacío = no se crea ningún ADMIN.
+    # Se crea sin contraseña: queda enlazado a su cuenta de Google en su primer ingreso.
+    email: ${LIGA_ADMIN_EMAIL:}
+
+# ---------------------------------------------------------------------------
+# Swagger UI / OpenAPI 3 con un grupo por módulo.
+# Cada grupo muestra solo sus rutas. Si una ruta no encaja en ningún grupo,
+# solo aparece en el documento global (/v3/api-docs).
+# ---------------------------------------------------------------------------
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  group-configs:
+    - group: autenticacion
+      display-name: 1. Autenticación
+      paths-to-match:
+        - /api/v1/auth/**
+        - /api/v1/usuarios/**
+    - group: catalogos
+      display-name: 2. Catálogos
+      paths-to-match:
+        - /api/v1/ligas/**
+        - /api/v1/estadios/**
+        - /api/v1/arbitros/**
+        - /api/v1/entrenadores/**
+      # Las consultas derivadas de una liga pertenecen al grupo de estadísticas.
+      paths-to-exclude:
+        - /api/v1/ligas/*/tabla-posiciones
+        - /api/v1/ligas/*/goleadores
+        - /api/v1/ligas/*/sanciones/**
+    - group: equipos-jugadores
+      display-name: 3. Equipos y jugadores
+      paths-to-match:
+        - /api/v1/equipos/**
+        - /api/v1/jugadores/**
+    - group: partidos
+      display-name: 4. Partidos, goles y tarjetas
+      paths-to-match:
+        - /api/v1/partidos/**
+    - group: estadisticas
+      display-name: 5. Estadísticas y sanciones
+      paths-to-match:
+        - /api/v1/ligas/*/tabla-posiciones
+        - /api/v1/ligas/*/goleadores
+        - /api/v1/ligas/*/sanciones/**

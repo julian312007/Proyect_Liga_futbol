@@ -1,0 +1,41 @@
+# Infraestructura local de desarrollo: PostgreSQL y Redis.
+# Uso:   docker compose up -d      (lee las variables del archivo .env)
+# Parar: docker compose down       (agrega -v para borrar también los datos de PostgreSQL)
+#
+# Solo para desarrollo: los puertos se publican únicamente en 127.0.0.1 y Redis no
+# tiene contraseña. No exponer este compose en un servidor.
+name: liga-futbol
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: liga-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-liga}
+      POSTGRES_USER: ${DB_USER:?Define DB_USER en el archivo .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en el archivo .env}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - liga_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: liga-redis
+    # Solo se usa como caché: sin persistencia en disco.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  liga_pgdata:
